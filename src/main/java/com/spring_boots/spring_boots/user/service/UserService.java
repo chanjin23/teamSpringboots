@@ -8,6 +8,7 @@ import com.spring_boots.spring_boots.user.domain.Users;
 import com.spring_boots.spring_boots.user.domain.UsersInfo;
 import com.spring_boots.spring_boots.user.dto.UserDto;
 import com.spring_boots.spring_boots.user.dto.request.*;
+import com.spring_boots.spring_boots.user.dto.response.AdminUserResponseDto;
 import com.spring_boots.spring_boots.user.dto.response.UserAdminCountResponseDto;
 import com.spring_boots.spring_boots.user.dto.response.UserDeleteResponseDto;
 import com.spring_boots.spring_boots.user.dto.response.UserResponseDto;
@@ -65,11 +66,6 @@ public class UserService {
 
     public Users findById(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Unexpected user"));
-    }
-
-    public Users findByEmail(String email) {
-        return userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("Unexpected user"));
     }
 
@@ -236,22 +232,32 @@ public class UserService {
 
     public Page<UserResponseDto> getUsersByCreatedAt(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<Users> usersPage = userRepository.findAll(pageable);
+//        Page<Users> usersPage = userRepository.findAll(pageable);
+        Page<AdminUserResponseDto> usersPage=userRepository.findUsers(pageable);
 
-        return usersPage.map(Users::toResponseDto);
+//        return usersPage.map(Users::toResponseDto);
+        return usersPage.map(AdminUserResponseDto::toResponseDto);
     }
 
     public UserAdminCountResponseDto countUsers() {
-        List<Users> users = userRepository.findAll();
-        long countAdmin = users.stream()
-                .filter(user -> user.getRole().equals(UserRole.ADMIN))
-                .count();
-        long totalUsers = users.stream()
-                .filter(user -> !user.isDeleted())
-                .count();
+//        List<Users> users = userRepository.findAll();
+        long countAdmin=userRepository.countAdmin();
+        long totalUser = userRepository.count();
+        log.info("user 전체 회원수 : {} ", totalUser);
+        log.info("admin 전체 수 : {}", countAdmin);
+//        long countAdmin = users.stream()
+//                .filter(user -> user.getRole().equals(UserRole.ADMIN))
+//                .count();
+//        long totalUsers = users.stream()
+//                .filter(user -> !user.isDeleted())
+//                .count();
+//        return UserAdminCountResponseDto.builder()
+//                .countAdmin(countAdmin)
+//                .totalUser(totalUsers)
+//                .build();
         return UserAdminCountResponseDto.builder()
                 .countAdmin(countAdmin)
-                .totalUser(totalUsers)
+                .totalUser(totalUser)
                 .build();
     }
 
