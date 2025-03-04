@@ -3,14 +3,12 @@ package com.spring_boots.spring_boots.user.controller;
 import com.spring_boots.spring_boots.user.domain.UserRole;
 import com.spring_boots.spring_boots.user.dto.request.JwtTokenDto;
 import com.spring_boots.spring_boots.user.dto.request.JwtTokenLoginRequest;
-import com.spring_boots.spring_boots.user.dto.request.RefreshTokenRequest;
 import com.spring_boots.spring_boots.user.dto.response.JwtTokenResponse;
-import com.spring_boots.spring_boots.user.dto.response.RefreshTokenResponse;
 import com.spring_boots.spring_boots.user.dto.response.UserValidateTokenResponseDto;
 import com.spring_boots.spring_boots.user.exception.PasswordNotMatchException;
 import com.spring_boots.spring_boots.user.exception.UserDeletedException;
 import com.spring_boots.spring_boots.user.exception.UserNotFoundException;
-import com.spring_boots.spring_boots.user.service.TokenService;
+import com.spring_boots.spring_boots.user.service.UserAuthService;
 import com.spring_boots.spring_boots.user.service.UserService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -27,30 +25,19 @@ import static com.spring_boots.spring_boots.config.jwt.UserConstants.REFRESH_TOK
 @RequestMapping("/api")
 @RequiredArgsConstructor
 @Slf4j
-public class TokenApiController {
+public class UserAuthApiController {
 
     private final UserService userService;
+    private final UserAuthService userAuthService;
 
     //jwt 로그인
     @PostMapping("/login")
     public ResponseEntity<JwtTokenResponse> jwtLogin(
             @RequestBody JwtTokenLoginRequest request,
-            HttpServletResponse response,
-            @CookieValue(value = "refreshToken", required = false) Cookie existingRefreshTokenCookie
+            HttpServletResponse response
     ) {
-        if (!userService.validateLogin(request)) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(JwtTokenResponse.builder()
-                            .message("아이디와 비밀번호를 입력하세요").build());
-        }
-
-        // 기존 쿠키 삭제 로직
-        if (existingRefreshTokenCookie != null) {
-            deleteTokenCookie(response);
-        }
-
         try {
-            JwtTokenDto jwtTokenResponse = userService.login(request);
+            JwtTokenDto jwtTokenResponse = userAuthService.login(request);
 
             getCookie(jwtTokenResponse, response);
 

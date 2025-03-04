@@ -21,10 +21,11 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
-import javax.crypto.SecretKey;
 import java.security.Key;
 import java.util.*;
 
+import static com.spring_boots.spring_boots.config.jwt.UserConstants.ACCESS_TOKEN_TYPE_VALUE;
+import static com.spring_boots.spring_boots.config.jwt.UserConstants.REFRESH_TOKEN_TYPE_VALUE;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -35,6 +36,9 @@ public class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private UserAuthService userAuthService;
 
     @Mock
     private JwtProviderImpl jwtProvider;
@@ -110,7 +114,7 @@ public class UserServiceTest {
         Map<String, Object> claims = Map.of(
                 "accountId", user.getUserId(),  //JWT 클래임에 accountId
                 "role", user.getRole(),  //JWT 클래임에 role
-                "provider",user.getProvider(),
+                "provider", user.getProvider(),
                 "userRealId", user.getUserRealId()   //JWT 클래임에 실제 ID 추가
         );
 
@@ -131,10 +135,10 @@ public class UserServiceTest {
         AuthTokenImpl accessToken = new AuthTokenImpl("accessToken", key);
         AuthTokenImpl refreshToken = new AuthTokenImpl("refreshToken", key);
 
-        when(jwtProvider.createAccessToken(user.getUserRealId(), user.getRole(), claims)).thenReturn(accessToken);
-        when(jwtProvider.createRefreshToken(user.getUserRealId(), user.getRole(), claims)).thenReturn(refreshToken);
+        when(jwtProvider.createAuthToken(user.getUserRealId(), user.getRole(), user.getUserId(),user.getProvider(), ACCESS_TOKEN_TYPE_VALUE)).thenReturn(accessToken);
+        when(jwtProvider.createAuthToken(user.getUserRealId(), user.getRole(), user.getUserId(),user.getProvider(), REFRESH_TOKEN_TYPE_VALUE)).thenReturn(refreshToken);
 
-        JwtTokenDto jwtTokenDto = userService.login(request);
+        JwtTokenDto jwtTokenDto = userAuthService.login(request);
 
         assertEquals("accessToken", jwtTokenDto.getAccessToken());
         assertEquals("refreshToken", jwtTokenDto.getRefreshToken());
@@ -155,7 +159,7 @@ public class UserServiceTest {
         when(bCryptPasswordEncoder.matches(request.getPassword(), user.getPassword())).thenReturn(false);
 
         Exception exception = assertThrows(PasswordNotMatchException.class, () -> {
-            userService.login(request);
+            userAuthService.login(request);
         });
 
         assertEquals("잘못된 비밀번호입니다.", exception.getMessage());

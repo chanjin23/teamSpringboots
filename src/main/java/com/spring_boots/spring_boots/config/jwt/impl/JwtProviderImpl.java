@@ -1,5 +1,7 @@
 package com.spring_boots.spring_boots.config.jwt.impl;
 
+import com.spring_boots.spring_boots.user.domain.Provider;
+import com.spring_boots.spring_boots.user.domain.RefreshToken;
 import com.spring_boots.spring_boots.user.domain.UserRole;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.impl.DefaultClaims;
@@ -13,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import java.io.Serializable;
 import java.security.Key;
 import java.util.Date;
 import java.util.Map;
@@ -23,7 +26,7 @@ import static com.spring_boots.spring_boots.config.jwt.UserConstants.REFRESH_TOK
 
 @Component
 @RequiredArgsConstructor
-public class JwtProviderImpl{
+public class JwtProviderImpl {
     @Value("${jwt.secret}") //설정 정보 파일에 값을 가져옴.
     private String secret;
 
@@ -43,59 +46,51 @@ public class JwtProviderImpl{
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
-//    public String createToken(Authentication authentication) {
-//        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-//        Date now = new Date();
-//        Date expiryDate = new Date(now.getTime() + refreshExpires);
-//
-//        return Jwts.builder()
-//                .setSubject(userDetails.getUsername())  // 사용자 이름을 subject로 설정
-//                .setIssuedAt(new Date())
-//                .setExpiration(expiryDate)
-//                .signWith(SignatureAlgorithm.HS512, secret)
-//                .compact();
-//    }
-
-//    public AuthTokenImpl convertAuthToken(String token) {
-//        return new AuthTokenImpl(token, key);
-//    }
-
     public Authentication getAuthentication(String authToken) {
         String username = extractUsername(authToken);
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
     }
 
-    public AuthTokenImpl createAccessToken(
-            String userId,
+    public AuthTokenImpl createAuthToken(
+            String userRealId,  //실제 아이디
             UserRole role,
-            Map<String, Object> claimsMap
+            Long userId,    //pk 아이디
+            Provider provider,
+            String tokenType
     ) {
-        Claims claims = new DefaultClaims(claimsMap); // Map을 Claims로 변환
-        claims.put("type", ACCESS_TOKEN_TYPE_VALUE);
-        return new AuthTokenImpl(
-                userId,
-                role,
-                key,
-                (Claims) claims,
-                new Date(System.currentTimeMillis() + accessExpires)
+        long currentDate = System.currentTimeMillis();
+        long expiredDate = createExpiredDate(tokenType);
+
+        Claims claims = createClaims(
+                userRealId, role, userId, provider, tokenType, currentDate, expiredDate
         );
+
+        return new AuthTokenImpl(userRealId, key, claims);
     }
 
-    public AuthTokenImpl createRefreshToken(
-            String userId,
-            UserRole role,
-            Map<String, Object> claimsMap
-    ) {
-        Claims claims = new DefaultClaims(claimsMap); // Map을 Claims로 변환
-        claims.put("type", REFRESH_TOKEN_TYPE_VALUE);
-        return new AuthTokenImpl(
-                userId,
-                role,
-                key,
-                (Claims) claims,
-                new Date(System.currentTimeMillis() + refreshExpires)
+    private long createExpiredDate(String tokenType) {
+        long time = System.currentTimeMillis();
+
+        if (tokenType.equals(ACCESS_TOKEN_TYPE_VALUE)) time += accessExpires;
+        else time += refreshExpires;
+
+        return time;
+    }
+
+    private Claims createClaims(String userRealId, UserRole role,
+                                Long userId, Provider provider,
+                                String tokenType, long currentDate, long expiredDate) {
+        Map<String, Object> claims = Map.of(
+                "accountId", userId,
+                "provider", provider,
+                "role", role,
+                "type", tokenType,
+                "userRealId", userRealId,
+                "iat", new Date(currentDate),
+                "exp", new Date(expiredDate)
         );
+        return new DefaultClaims(claims);
     }
 
     public String extractUsername(String token) {
@@ -137,7 +132,7 @@ public class JwtProviderImpl{
     }
 
     // 리프레시 토큰을 사용하여 새로운 액세스 토큰 생성
-    public String generateAccessTokenFromRefreshToken(String refreshToken) {
+    public String[] generateAccessTokenAndRefreshToken(String refreshToken) {
         // 리프레시 토큰 검증
         if (!validateToken(refreshToken)) {
             throw new RuntimeException("Invalid refresh token");
@@ -145,22 +140,15 @@ public class JwtProviderImpl{
 
         // 리프레시 토큰에서 사용자 정보를 추출
         Claims claims = extractAllClaims(refreshToken); //리프레시토큰에 있는 모든 정보를 추출
-        String userId = claims.getSubject(); //리프레시토큰에 있는 사용자 ID 또는 고유 식별자
         String userRealId = claims.get("userRealId", String.class); // 사용자 실제 ID
-        Long accountId = claims.get("accountId", Long.class); // 계정 ID
-        String role = claims.get("role", String.class); // 사용자 역할
+        Long userId = claims.get("accountId", Long.class); // 계정 ID
+        UserRole role = claims.get("role", UserRole.class); // 사용자 역할
+        Provider provider = claims.get("provider", Provider.class);
 
-        // 새로운 액세스 토큰 생성
-        return Jwts.builder()
-                .setSubject(userId) // 사용자 ID 설정
-                .claim("userRealId", userRealId) // 실제 사용자 ID 설정
-                .claim("accountId", accountId) // 계정 ID 설정
-                .claim("role", role) // 사용자 역할 설정
-                .claim("type", "access_token") // 토큰 타입 설정
-                .setIssuedAt(new Date(System.currentTimeMillis())) // 발급 시간 설정
-                .setExpiration(new Date(System.currentTimeMillis() + accessExpires)) // 만료 시간 설정
-                .signWith(SignatureAlgorithm.HS256, secret) // 서명 알고리즘 및 비밀키 설정
-                .compact(); // JWT 생성
+        AuthTokenImpl newAccessToken = createAuthToken(userRealId, role, userId, provider, ACCESS_TOKEN_TYPE_VALUE);
+        AuthTokenImpl newRefreshToken = createAuthToken(userRealId, role, userId, provider, REFRESH_TOKEN_TYPE_VALUE);
+
+        return new String[]{newAccessToken.getToken(), newRefreshToken.getToken()};
     }
 
     public boolean validateAdminToken(String accessToken) {

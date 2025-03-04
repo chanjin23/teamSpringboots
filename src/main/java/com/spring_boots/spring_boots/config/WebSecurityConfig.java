@@ -1,13 +1,10 @@
 package com.spring_boots.spring_boots.config;
 
 import com.spring_boots.spring_boots.config.jwt.JwtFilter;
-import com.spring_boots.spring_boots.config.jwt.impl.JwtProviderImpl;
 import com.spring_boots.spring_boots.config.jwt.impl.UserDetailsServiceImpl;
 import com.spring_boots.spring_boots.config.oauth.OAuth2SuccessHandler;
 import com.spring_boots.spring_boots.config.oauth.OAuth2AuthorizationRequestBasedOnCookieRepository;
-import com.spring_boots.spring_boots.user.repository.RefreshTokenRepository;
-import com.spring_boots.spring_boots.user.service.OAuth2UserCustomService;
-import com.spring_boots.spring_boots.user.service.UserService;
+import com.spring_boots.spring_boots.user.service.OAuthUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,8 +13,6 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
-import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -25,8 +20,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 
 import java.util.List;
-
-import static org.springframework.boot.autoconfigure.security.servlet.PathRequest.toH2Console;
 
 /**
  * Security 커스텀설정 정보
@@ -39,7 +32,7 @@ import static org.springframework.boot.autoconfigure.security.servlet.PathReques
 public class WebSecurityConfig {
 
     private final UserDetailsServiceImpl userDetailsService;
-    private final OAuth2UserCustomService oAuth2UserCustomService;
+    private final OAuthUserService oAuthUserService;
     private final JwtFilter jwtFilter;
     private final OAuth2SuccessHandler successHandler;
     private final OAuth2AuthorizationRequestBasedOnCookieRepository cookieRepository;
@@ -97,7 +90,7 @@ public class WebSecurityConfig {
                         )
                         .successHandler(successHandler)  // 로그인 성공 후 핸들러 설정
                         .userInfoEndpoint(userInfoEndpoint ->
-                                userInfoEndpoint.userService(oAuth2UserCustomService)  // 사용자 정보 처리 서비스 설정
+                                userInfoEndpoint.userService(oAuthUserService)  // 사용자 정보 처리 서비스 설정
                         )
                 )
 

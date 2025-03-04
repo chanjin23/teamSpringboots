@@ -1,16 +1,12 @@
 package com.spring_boots.spring_boots.config.jwt.impl;
 
 
-import com.spring_boots.spring_boots.user.domain.UserRole;
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.impl.DefaultClaims;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.security.Key;
-import java.util.Date;
-import java.util.Map;
 import java.util.Optional;
 
 @Getter
@@ -22,29 +18,21 @@ public class AuthTokenImpl {
 
     public AuthTokenImpl(
             String userId,
-            UserRole role,
             Key key,
-            Claims claims,
-            Date expiredDate
+            Claims claims
     ) {
         this.key = key;
-        this.token = createJwtToken(userId, role, claims, expiredDate).get();
+        this.token = createJwtToken(userId, claims).get();
     }
 
     private Optional<String> createJwtToken(
             String userId,
-            UserRole role,
-            Map<String, Object> claimsMap,
-            Date expiredDate
+            Claims claims
     ) {
-        DefaultClaims claims = new DefaultClaims(claimsMap);
-        claims.put("role", role);
-
         return Optional.ofNullable(Jwts.builder()
-                .setSubject(userId)
+                .setSubject(userId) //jwt 고유 식별정보
                 .addClaims(claims)
                 .signWith(key, SignatureAlgorithm.HS256)
-                .setExpiration(expiredDate)
                 .compact()
         );
     }

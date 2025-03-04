@@ -31,8 +31,8 @@ public class JwtFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         // JWT 토큰을 쿠키에서 추출
-        String jwtAccessToken = resolveAccessTokenFromCookies(request);
-        String jwtRefreshToken = resolveRefreshTokenFromCookies(request);
+        String jwtAccessToken = resolveToken(request, ACCESS_TOKEN_TYPE_VALUE);
+        String jwtRefreshToken = resolveToken(request, REFRESH_TOKEN_TYPE_VALUE);
 
         String requestURI = request.getRequestURI();
         if (requestURI.startsWith("/api/login")) {
@@ -50,9 +50,9 @@ public class JwtFilter extends OncePerRequestFilter {
 
             // 리프레시토큰이 유효하다면 새로운 액세스토큰 발급
             // 해당 메소드에서 유효성 검사까지 같이 진행
-            String newAccessToken = tokenProvider.generateAccessTokenFromRefreshToken(jwtRefreshToken);
+            String[] newToken = tokenProvider.generateAccessTokenAndRefreshToken(jwtRefreshToken);
 
-            log.info("리프레시토큰 발급 완료..!");
+            log.info("토큰 재발급 완료..!");
 
             // 새로운 액세스토큰을 쿠키에 저장
             Cookie newAccessTokenCookie = new Cookie(ACCESS_TOKEN_TYPE_VALUE, newAccessToken);
@@ -70,43 +70,18 @@ public class JwtFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    // accessToken을 쿠키에서 추출
-    private String resolveAccessTokenFromCookies(HttpServletRequest request) {
+    // 쿠키에서 토큰 추출
+    private String resolveToken(HttpServletRequest request,String tokenType) {
         if (request.getCookies() == null) {
             return null;
         }
 
-        // 쿠키에서 "accessToken" 추출
+        // 쿠키에서 토큰 추출
         Optional<Cookie> jwtCookie = Arrays.stream(request.getCookies())
-                .filter(cookie -> ACCESS_TOKEN_TYPE_VALUE.equals(cookie.getName()))
+                .filter(cookie -> tokenType.equals(cookie.getName()))
                 .findFirst();
 
         return jwtCookie.map(Cookie::getValue).orElse(null);
     }
 
-    // refreshToken을 쿠키에서 추출
-    private String resolveRefreshTokenFromCookies(HttpServletRequest request) {
-        if (request.getCookies() == null) {
-            return null;
-        }
-
-        // 쿠키에서 "refreshToken" 추출
-        Optional<Cookie> jwtCookie = Arrays.stream(request.getCookies())
-                .filter(cookie -> REFRESH_TOKEN_TYPE_VALUE.equals(cookie.getName()))
-                .findFirst();
-
-        return jwtCookie.map(Cookie::getValue).orElse(null);
-    }
-
-    //실제 토큰 발급
-//    private Optional<String> resolveToken(HttpServletRequest request) {
-//        String bearerToken = request.getHeader(AUTHORIZATION_TOKEN_KEY);
-//        //요청된 데이터에서 Authorization 에 해당하는 데이터를 가지고 온다.
-//        if (bearerToken!=null && bearerToken.startsWith(TOKEN_PREFIX)) {
-//            return Optional.of(bearerToken.substring(TOKEN_PREFIX.length()));
-//            //만약 값이 있다면 "bearer "를 제외한 값을 return
-//        }
-//
-//        return Optional.empty();    //없다면 null
-//    }
 }

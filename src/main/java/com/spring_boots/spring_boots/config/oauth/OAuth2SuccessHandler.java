@@ -37,23 +37,18 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal(); // 인증된 사용자의 정보를 가져옴
         Users user = userService.findByUserRealId((String) oAuth2User.getAttributes().get("email")); // 사용자 정보 조회
 
-        Map<String, Object> claims = Map.of(
-                "accountId", user.getUserId(),  //JWT 클래임에 accountId
-                "role", user.getRole(),  //JWT 클래임에 role
-                "provider",user.getProvider(),
-                "userRealId", user.getUserRealId()   //JWT 클래임에 실제 ID 추가
-        );
-
         // 리프레시 토큰 생성 및 저장
-        AuthTokenImpl createRefreshToken = provider.createRefreshToken(user.getUserRealId(), user.getRole(), claims); // 리프레시 토큰 생성
-        String refreshToken = createRefreshToken.getToken();
+        String refreshToken = provider.createAuthToken(
+                user.getUserRealId(), user.getRole(), user.getUserId(), user.getProvider(), REFRESH_TOKEN_TYPE_VALUE
+        ).getToken();
 
         saveRefreshToken(user.getUserId(), refreshToken); // 리프레시 토큰 저장
         addRefreshTokenToCookie(request, response, refreshToken); // 리프레시 토큰을 쿠키에 추가
 
         // 액세스 토큰 생성
-        AuthTokenImpl createAccessToken = provider.createAccessToken(user.getUserRealId(), user.getRole(), claims); // 리프레시 토큰 생성
-        String accessToken = createAccessToken.getToken();
+        String accessToken = provider.createAuthToken(
+                user.getUserRealId(), user.getRole(), user.getUserId(), user.getProvider(), ACCESS_TOKEN_TYPE_VALUE
+        ).getToken();
 
         addAccessTokenToCookie(request, response, accessToken); // 리프레시 토큰을 쿠키에 추가
 //        String targetUrl = getTargetUrl(accessToken); // 리다이렉트 URL 생성

@@ -69,44 +69,6 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("Unexpected user"));
     }
 
-    public JwtTokenDto login(JwtTokenLoginRequest request) {
-        Users user = userRepository.findByUserRealId(request.getUserRealId())
-                .orElseThrow(() -> new UserNotFoundException("가입되지 않은 ID 입니다."));
-
-        if (user.isDeleted()) {
-            throw new UserDeletedException("회원 정보가 삭제된 상태입니다.");
-        }
-
-        if (!bCryptPasswordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new PasswordNotMatchException("잘못된 비밀번호입니다.");
-        }
-
-        Map<String, Object> claims = Map.of(
-                "accountId", user.getUserId(),  //JWT 클래임에 accountId
-                "role", user.getRole(),  //JWT 클래임에 role
-                "provider", user.getProvider(),
-                "userRealId", user.getUserRealId()   //JWT 클래임에 실제 ID 추가
-        );
-
-        AuthTokenImpl accessToken = jwtProvider.createAccessToken(
-                user.getUserRealId(),   //토큰에 실제 ID 정보 입력
-                user.getRole(),
-                claims
-        );
-
-        AuthTokenImpl refreshToken = jwtProvider.createRefreshToken(
-                user.getUserRealId(),   //토큰에 실제 ID 정보 입력
-                user.getRole(),
-                claims
-        );
-
-        return JwtTokenDto.builder()
-                .accessToken(accessToken.getToken())
-                .refreshToken(refreshToken.getToken())
-                .role(user.getRole())
-                .build();
-    }
-
     public List<UserResponseDto> findAll() {
         List<Users> users = userRepository.findAll();
 
@@ -136,20 +98,6 @@ public class UserService {
     }
 
     @Transactional
-    public void deleteUser(Users authUser) {
-        userRepository.delete(authUser);
-    }
-
-    public boolean isDeleteUser(Users authUser) {
-        Optional<Users> findUser = userRepository.findById(authUser.getUserId());
-        if (findUser.isPresent()) {
-            return false;   //존재하면 false 반환
-        }
-
-        return true;
-    }
-
-    @Transactional
     public UserDeleteResponseDto softDeleteUser(UserDto userDto) {
         Users user = findById(userDto.getUserId());
         return user.deleteUser();
@@ -171,10 +119,6 @@ public class UserService {
     @Transactional
     public void grantRole(Users authUser, AdminGrantTokenRequestDto adminGrantTokenRequestDto) {
         authUser.updateToRole(adminGrantTokenRequestDto);
-    }
-
-    public boolean isGrantAdmin(Users authUser) {
-        return authUser.getRole().equals(UserRole.ADMIN);
     }
 
     public boolean validateToken(String accessToken) {
@@ -224,37 +168,16 @@ public class UserService {
         }
     }
 
-    public boolean checkGoogleLoginDeleted(UserDto userDto) {
-        Users user = findById(userDto.getUserId());
-
-        return user.isDeleted();
-    }
-
     public Page<UserResponseDto> getUsersByCreatedAt(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-//        Page<Users> usersPage = userRepository.findAll(pageable);
         Page<AdminUserResponseDto> usersPage=userRepository.findUsers(pageable);
 
-//        return usersPage.map(Users::toResponseDto);
         return usersPage.map(AdminUserResponseDto::toResponseDto);
     }
 
     public UserAdminCountResponseDto countUsers() {
-//        List<Users> users = userRepository.findAll();
         long countAdmin=userRepository.countAdmin();
         long totalUser = userRepository.count();
-        log.info("user 전체 회원수 : {} ", totalUser);
-        log.info("admin 전체 수 : {}", countAdmin);
-//        long countAdmin = users.stream()
-//                .filter(user -> user.getRole().equals(UserRole.ADMIN))
-//                .count();
-//        long totalUsers = users.stream()
-//                .filter(user -> !user.isDeleted())
-//                .count();
-//        return UserAdminCountResponseDto.builder()
-//                .countAdmin(countAdmin)
-//                .totalUser(totalUsers)
-//                .build();
         return UserAdminCountResponseDto.builder()
                 .countAdmin(countAdmin)
                 .totalUser(totalUser)
@@ -293,22 +216,6 @@ public class UserService {
 
         return true; // 모든 유효성 검증 통과
 
-    }
-
-    public boolean validateLogin(JwtTokenLoginRequest request) {
-        //아이디 값이 빈값이면 false
-        String userRealId = request.getUserRealId();
-        if (userRealId.isEmpty()) {
-            return false;
-        }
-
-        //패스워드 값이 빈값이면 false
-        String password = request.getPassword();
-        if (password.isEmpty()) {
-            return false;
-        }
-
-        return true;
     }
 
     public boolean validateUpdateUser(UserUpdateRequestDto request) {

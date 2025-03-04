@@ -1,9 +1,9 @@
 package com.spring_boots.spring_boots.user.controller;
 
 import com.spring_boots.spring_boots.user.exception.UserNotFoundException;
+import com.spring_boots.spring_boots.user.service.UserAuthService;
 import org.springframework.test.context.ActiveProfiles;
 import com.spring_boots.spring_boots.user.domain.UserRole;
-import com.spring_boots.spring_boots.user.domain.Users;
 import com.spring_boots.spring_boots.user.dto.request.JwtTokenDto;
 import com.spring_boots.spring_boots.user.dto.request.JwtTokenLoginRequest;
 import com.spring_boots.spring_boots.user.dto.response.JwtTokenResponse;
@@ -22,16 +22,19 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ActiveProfiles("test")
-class TokenApiControllerTest {
+class UserAuthApiControllerTest {
 
     @Mock
     private UserService userService;  // UserService를 Mock으로 설정
 
     @Mock
+    private UserAuthService userAuthService;
+
+    @Mock
     private HttpServletResponse response;  // HttpServletResponse를 Mock으로 설정
 
     @InjectMocks
-    private TokenApiController tokenApiController;  // 실제 테스트할 Controller 인스턴스
+    private UserAuthApiController userAuthApiController;  // 실제 테스트할 Controller 인스턴스
 
     @BeforeEach
     public void setUp() {
@@ -47,14 +50,14 @@ class TokenApiControllerTest {
         JwtTokenDto jwtTokenDto = new JwtTokenDto("accessToken", "refreshToken", UserRole.USER);
 
         // Mock 동작 설정
-        when(userService.login(any(JwtTokenLoginRequest.class))).thenReturn(jwtTokenDto);
+        when(userAuthService.login(any(JwtTokenLoginRequest.class))).thenReturn(jwtTokenDto);
 
         // API 호출
-        ResponseEntity<JwtTokenResponse> responseEntity = tokenApiController.jwtLogin(
-                loginRequest, response, null);  //쿠키가 없음!
+        ResponseEntity<JwtTokenResponse> responseEntity = userAuthApiController.jwtLogin(
+                loginRequest, response);  //쿠키가 없음!
 
         // 검증
-        verify(userService,
+        verify(userAuthService,
                 times(1)).login(any(JwtTokenLoginRequest.class));  // UserService의 login 메서드가 호출되었는지 검증
         verify(response, times(2)).addCookie(any(Cookie.class));  // 토큰2개, 쿠키가 추가되었는지 검증
 
@@ -75,14 +78,14 @@ class TokenApiControllerTest {
         JwtTokenDto jwtTokenDto = new JwtTokenDto("newAccessToken", "newRefreshToken", UserRole.USER);
 
         // Mock 동작 설정
-        when(userService.login(any(JwtTokenLoginRequest.class))).thenReturn(jwtTokenDto);   //로그인하면 jwtToken반환
+        when(userAuthService.login(any(JwtTokenLoginRequest.class))).thenReturn(jwtTokenDto);   //로그인하면 jwtToken반환
 
         // API 호출
-        ResponseEntity<JwtTokenResponse> responseEntity = tokenApiController.jwtLogin(
-                loginRequest, response, existingRefreshTokenCookie);
+        ResponseEntity<JwtTokenResponse> responseEntity = userAuthApiController.jwtLogin(
+                loginRequest, response);
 
         // 검증
-        verify(userService, times(1)).login(any(JwtTokenLoginRequest.class));  // UserService의 login 메서드가 호출되었는지 검증
+        verify(userAuthService, times(1)).login(any(JwtTokenLoginRequest.class));  // UserService의 login 메서드가 호출되었는지 검증
         verify(response, times(4)).addCookie(any(Cookie.class));  //기존토큰 2개 삭제 및 추가 검증
 
         // 응답 값 검증
@@ -98,14 +101,14 @@ class TokenApiControllerTest {
 
 
         // Mock 동작 설정
-        when(userService.login(any(JwtTokenLoginRequest.class))).thenThrow(new UserNotFoundException("가입되지 않은 실제 ID 입니다."));
+        when(userAuthService.login(any(JwtTokenLoginRequest.class))).thenThrow(new UserNotFoundException("가입되지 않은 실제 ID 입니다."));
 
         // API 호출
-        ResponseEntity<JwtTokenResponse> responseEntity = tokenApiController.jwtLogin(
-                loginRequest, response, null);  // 쿠키가 없음
+        ResponseEntity<JwtTokenResponse> responseEntity = userAuthApiController.jwtLogin(
+                loginRequest, response);  // 쿠키가 없음
 
         // 검증: userService의 login 메서드가 1번 호출되었는지 검증
-        verify(userService, times(1)).login(any(JwtTokenLoginRequest.class));
+        verify(userAuthService, times(1)).login(any(JwtTokenLoginRequest.class));
 
         // 리프레시 토큰,엑세스 토큰 두개  삭제했으므로 2번 실행
         verify(response, times(0)).addCookie(any(Cookie.class));
