@@ -162,7 +162,7 @@ public class JwtProviderImpl {
             String role = claims.get("role", String.class);
 
             // 사용자 역할이 관리자("ROLE_ADMIN")이면 true 반환
-            return "ADMIN".equals(role);
+            return "Admin".equals(role);
         } catch (SignatureException e) {
             // 서명이 유효하지 않은 경우 (토큰이 변조되었을 때)
             throw new RuntimeException("Invalid JWT signature");

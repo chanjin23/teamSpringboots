@@ -5,6 +5,7 @@ import com.spring_boots.spring_boots.user.dto.UserDto;
 import com.spring_boots.spring_boots.user.dto.request.AdminCodeRequestDto;
 import com.spring_boots.spring_boots.user.dto.request.AdminGrantTokenRequestDto;
 import com.spring_boots.spring_boots.user.dto.response.*;
+import com.spring_boots.spring_boots.user.service.AdminService;
 import com.spring_boots.spring_boots.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserAdminApiController {
 
     private final UserService userService;
+    private final AdminService adminService;
 
     //모든 회원 정보 조회(관리자)
     @PreAuthorize("hasRole('ADMIN')")
@@ -27,14 +29,14 @@ public class UserAdminApiController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        Page<UserResponseDto> result = userService.getUsersByCreatedAt(page, size);
+        Page<UserResponseDto> result = adminService.getUsersByCreatedAt(page, size);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin/count")
     public ResponseEntity<UserAdminCountResponseDto> countUsers() {
-        UserAdminCountResponseDto userAdminCountResponseDto = userService.countUsers();
+        UserAdminCountResponseDto userAdminCountResponseDto = adminService.countUsers();
         return ResponseEntity.status(HttpStatus.OK).body(userAdminCountResponseDto);
     }
 
@@ -67,7 +69,7 @@ public class UserAdminApiController {
                     .body(AdminGrantTokenResponseDto.builder()
                             .message("인증되지 않은 사용자입니다. 로그인해주세요").build());
         }
-        userService.grantRole(authUser, adminGrantTokenRequestDto);
+        adminService.grantRole(authUser, adminGrantTokenRequestDto);
         return ResponseEntity.status(HttpStatus.OK).body(AdminGrantTokenResponseDto.builder()
                 .message("권한부여 성공!").build());
     }
@@ -76,7 +78,7 @@ public class UserAdminApiController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/users/grant")
     public ResponseEntity<AdminCodeResponseDto> checkAdminCode(@RequestBody AdminCodeRequestDto adminCodeDto) {
-        if (userService.checkAdminCode(adminCodeDto)) {
+        if (adminService.checkAdminCode(adminCodeDto)) {
             return ResponseEntity.status(HttpStatus.OK)
                     .body(AdminCodeResponseDto.builder().message("success").build());
         } else {
