@@ -7,17 +7,11 @@ import com.spring_boots.spring_boots.user.dto.request.AdminGrantTokenRequestDto;
 import com.spring_boots.spring_boots.user.dto.response.*;
 import com.spring_boots.spring_boots.user.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.apache.coyote.Response;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-
-import static com.spring_boots.spring_boots.config.jwt.UserConstants.ACCESS_TOKEN_TYPE_VALUE;
 
 @RestController
 @RequestMapping("/api")
@@ -32,9 +26,7 @@ public class UserAdminApiController {
     public ResponseEntity<Page<UserResponseDto>> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
-//            ,@RequestParam(value = "keyword", defaultValue = "") String keyword
     ) {
-//        List<UserResponseDto> users = userService.findAll();
         Page<UserResponseDto> result = userService.getUsersByCreatedAt(page, size);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
@@ -78,33 +70,6 @@ public class UserAdminApiController {
         userService.grantRole(authUser, adminGrantTokenRequestDto);
         return ResponseEntity.status(HttpStatus.OK).body(AdminGrantTokenResponseDto.builder()
                 .message("권한부여 성공!").build());
-    }
-
-    //관리자 확인 API
-    @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/users/admin-check")
-    public ResponseEntity<UserCheckAdminResponseDto> checkAdmin(@CookieValue(value = ACCESS_TOKEN_TYPE_VALUE, required = false) String accessToken) {
-        //accessToken 이 없는 경우
-        if (accessToken == null || accessToken.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(UserCheckAdminResponseDto.builder()
-                            .message("현재 엑세스 토큰이 없습니다.").build());
-        }
-
-        try {
-            boolean isAdmin = userService.validateAdminToken(accessToken);
-
-            if (isAdmin) {
-                return ResponseEntity.status(HttpStatus.OK)
-                        .body(UserCheckAdminResponseDto.builder().message("관리자 인증 성공").build());
-            } else {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(UserCheckAdminResponseDto.builder().message("관리자 인증 실패").build());
-            }
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(UserCheckAdminResponseDto.builder().message("유효하지않은 토큰").build());
-        }
     }
 
     //관리자 코드 체크 API

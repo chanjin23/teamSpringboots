@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.security.Key;
+import java.util.Date;
 import java.util.Optional;
 
 @Getter
@@ -19,20 +20,24 @@ public class AuthTokenImpl {
     public AuthTokenImpl(
             String userId,
             Key key,
-            Claims claims
+            Claims claims,
+            Date expiredDate
     ) {
         this.key = key;
-        this.token = createJwtToken(userId, claims).get();
+        this.token = createJwtToken(userId, claims, expiredDate).get();
     }
 
     private Optional<String> createJwtToken(
             String userId,
-            Claims claims
+            Claims claims,
+            Date expiredDate
     ) {
         return Optional.ofNullable(Jwts.builder()
                 .setSubject(userId) //jwt 고유 식별정보
                 .addClaims(claims)
                 .signWith(key, SignatureAlgorithm.HS256)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(expiredDate)
                 .compact()
         );
     }

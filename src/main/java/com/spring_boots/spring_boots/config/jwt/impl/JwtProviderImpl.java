@@ -1,31 +1,33 @@
 package com.spring_boots.spring_boots.config.jwt.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spring_boots.spring_boots.user.domain.Provider;
-import com.spring_boots.spring_boots.user.domain.RefreshToken;
 import com.spring_boots.spring_boots.user.domain.UserRole;
+import com.spring_boots.spring_boots.user.dto.TokenDto;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.impl.DefaultClaims;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
-import java.io.Serializable;
 import java.security.Key;
 import java.util.Date;
 import java.util.Map;
 import java.util.function.Function;
 
-import static com.spring_boots.spring_boots.config.jwt.UserConstants.ACCESS_TOKEN_TYPE_VALUE;
-import static com.spring_boots.spring_boots.config.jwt.UserConstants.REFRESH_TOKEN_TYPE_VALUE;
+import static com.spring_boots.spring_boots.config.jwt.JwtConstants.*;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtProviderImpl {
     @Value("${jwt.secret}") //설정 정보 파일에 값을 가져옴.
     private String secret;
@@ -54,19 +56,18 @@ public class JwtProviderImpl {
 
     public AuthTokenImpl createAuthToken(
             String userRealId,  //실제 아이디
-            UserRole role,
+            String role,
             Long userId,    //pk 아이디
-            Provider provider,
+            String provider,
             String tokenType
     ) {
-        long currentDate = System.currentTimeMillis();
         long expiredDate = createExpiredDate(tokenType);
 
         Claims claims = createClaims(
-                userRealId, role, userId, provider, tokenType, currentDate, expiredDate
+                userRealId, role, userId, provider, tokenType
         );
 
-        return new AuthTokenImpl(userRealId, key, claims);
+        return new AuthTokenImpl(userRealId, key, claims, new Date(expiredDate));
     }
 
     private long createExpiredDate(String tokenType) {
@@ -78,17 +79,15 @@ public class JwtProviderImpl {
         return time;
     }
 
-    private Claims createClaims(String userRealId, UserRole role,
-                                Long userId, Provider provider,
-                                String tokenType, long currentDate, long expiredDate) {
+    private Claims createClaims(String userRealId, String role,
+                                Long userId, String provider,
+                                String tokenType) {
         Map<String, Object> claims = Map.of(
                 "accountId", userId,
                 "provider", provider,
                 "role", role,
                 "type", tokenType,
-                "userRealId", userRealId,
-                "iat", new Date(currentDate),
-                "exp", new Date(expiredDate)
+                "userRealId", userRealId
         );
         return new DefaultClaims(claims);
     }
@@ -132,7 +131,7 @@ public class JwtProviderImpl {
     }
 
     // 리프레시 토큰을 사용하여 새로운 액세스 토큰 생성
-    public String[] generateAccessTokenAndRefreshToken(String refreshToken) {
+    public TokenDto generateAccessTokenAndRefreshToken(String refreshToken) throws JsonProcessingException {
         // 리프레시 토큰 검증
         if (!validateToken(refreshToken)) {
             throw new RuntimeException("Invalid refresh token");
@@ -142,13 +141,16 @@ public class JwtProviderImpl {
         Claims claims = extractAllClaims(refreshToken); //리프레시토큰에 있는 모든 정보를 추출
         String userRealId = claims.get("userRealId", String.class); // 사용자 실제 ID
         Long userId = claims.get("accountId", Long.class); // 계정 ID
-        UserRole role = claims.get("role", UserRole.class); // 사용자 역할
-        Provider provider = claims.get("provider", Provider.class);
+        String role = claims.get("role", String.class); // 사용자 역할
+        String provider = claims.get("provider", String.class);
 
         AuthTokenImpl newAccessToken = createAuthToken(userRealId, role, userId, provider, ACCESS_TOKEN_TYPE_VALUE);
         AuthTokenImpl newRefreshToken = createAuthToken(userRealId, role, userId, provider, REFRESH_TOKEN_TYPE_VALUE);
 
-        return new String[]{newAccessToken.getToken(), newRefreshToken.getToken()};
+        return TokenDto.builder()
+                .accessToken(newAccessToken.getToken())
+                .refreshToken(newRefreshToken.getToken())
+                .build();
     }
 
     public boolean validateAdminToken(String accessToken) {

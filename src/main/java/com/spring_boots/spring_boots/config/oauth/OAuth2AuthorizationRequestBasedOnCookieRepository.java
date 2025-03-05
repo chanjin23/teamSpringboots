@@ -13,9 +13,6 @@ public class OAuth2AuthorizationRequestBasedOnCookieRepository implements Author
     // OAuth2 인증 요청을 저장할 때 사용하는 쿠키 이름
     public final static String OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME = "oauth2_auth_request";
 
-    // 쿠키의 만료 시간(초 단위), 여기서는 18000초로 설정 (약 5시간)
-    private final static int COOKIE_EXPIRE_SECONDS = 18000;
-
     // 인증 요청을 제거하는 메서드, 여기서는 쿠키에서 해당 인증 요청을 불러온 후 반환함
     @Override
     public OAuth2AuthorizationRequest removeAuthorizationRequest(HttpServletRequest request, HttpServletResponse response) {
@@ -42,7 +39,7 @@ public class OAuth2AuthorizationRequestBasedOnCookieRepository implements Author
         }
 
         // 인증 요청을 직렬화하여 쿠키에 저장하고 만료 시간을 설정함
-        CookieUtil.addCookie(response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME, CookieUtil.serialize(authorizationRequest), COOKIE_EXPIRE_SECONDS);
+        CookieUtil.addCookie(response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME, CookieUtil.serialize(authorizationRequest));
     }
 
     // 인증 요청 관련 쿠키를 제거하는 메서드

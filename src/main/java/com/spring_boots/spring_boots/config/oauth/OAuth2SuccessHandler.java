@@ -1,7 +1,6 @@
 package com.spring_boots.spring_boots.config.oauth;
 
 import com.spring_boots.spring_boots.common.util.CookieUtil;
-import com.spring_boots.spring_boots.config.jwt.impl.AuthTokenImpl;
 import com.spring_boots.spring_boots.config.jwt.impl.JwtProviderImpl;
 import com.spring_boots.spring_boots.user.domain.RefreshToken;
 import com.spring_boots.spring_boots.user.domain.Users;
@@ -17,9 +16,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
-import java.util.Map;
 
-import static com.spring_boots.spring_boots.config.jwt.UserConstants.*;
+import static com.spring_boots.spring_boots.config.jwt.JwtConstants.*;
 
 @Component
 @RequiredArgsConstructor
@@ -39,7 +37,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         // 리프레시 토큰 생성 및 저장
         String refreshToken = provider.createAuthToken(
-                user.getUserRealId(), user.getRole(), user.getUserId(), user.getProvider(), REFRESH_TOKEN_TYPE_VALUE
+                user.getUserRealId(), user.getRole().getRoleName(), user.getUserId(), user.getProvider().getProvider(), REFRESH_TOKEN_TYPE_VALUE
         ).getToken();
 
         saveRefreshToken(user.getUserId(), refreshToken); // 리프레시 토큰 저장
@@ -47,7 +45,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         // 액세스 토큰 생성
         String accessToken = provider.createAuthToken(
-                user.getUserRealId(), user.getRole(), user.getUserId(), user.getProvider(), ACCESS_TOKEN_TYPE_VALUE
+                user.getUserRealId(), user.getRole().getRoleName(), user.getUserId(), user.getProvider().getProvider(), ACCESS_TOKEN_TYPE_VALUE
         ).getToken();
 
         addAccessTokenToCookie(request, response, accessToken); // 리프레시 토큰을 쿠키에 추가
@@ -63,7 +61,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         int cookieMaxAge = (int) ACCESS_TOKEN_DURATION.toSeconds(); // 쿠키 유효 기간 설정
 
         CookieUtil.deleteCookie(request, response, ACCESS_TOKEN_TYPE_VALUE); // 기존 쿠키 삭제
-        CookieUtil.addCookie(response, ACCESS_TOKEN_TYPE_VALUE, accessToken, cookieMaxAge); // 새 쿠키 추가
+        CookieUtil.addCookie(response, ACCESS_TOKEN_TYPE_VALUE, accessToken); // 새 쿠키 추가
     }
 
     // 리프레시 토큰을 DB에 저장하는 메서드
@@ -80,7 +78,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         int cookieMaxAge = (int) REFRESH_TOKEN_DURATION.toSeconds(); // 쿠키 유효 기간 설정
 
         CookieUtil.deleteCookie(request, response, REFRESH_TOKEN_TYPE_VALUE); // 기존 쿠키 삭제
-        CookieUtil.addCookie(response, REFRESH_TOKEN_TYPE_VALUE, refreshToken, cookieMaxAge); // 새 쿠키 추가
+        CookieUtil.addCookie(response, REFRESH_TOKEN_TYPE_VALUE, refreshToken); // 새 쿠키 추가
     }
 
     // 인증 관련 속성을 정리하는 메서드

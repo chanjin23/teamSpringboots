@@ -121,14 +121,6 @@ public class UserService {
         authUser.updateToRole(adminGrantTokenRequestDto);
     }
 
-    public boolean validateToken(String accessToken) {
-        return jwtProvider.validateToken(accessToken);
-    }
-
-    public boolean validateAdminToken(String accessToken) {
-        return jwtProvider.validateAdminToken(accessToken);
-    }
-
     //관리자코드체크
     public boolean checkAdminCode(AdminCodeRequestDto adminCodeDto) {
         //임의 토큰 만들기

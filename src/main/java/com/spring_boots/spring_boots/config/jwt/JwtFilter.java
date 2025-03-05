@@ -1,6 +1,8 @@
 package com.spring_boots.spring_boots.config.jwt;
 
+import com.spring_boots.spring_boots.common.util.CookieUtil;
 import com.spring_boots.spring_boots.config.jwt.impl.JwtProviderImpl;
+import com.spring_boots.spring_boots.user.dto.TokenDto;
 import jakarta.servlet.*;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,8 +18,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Optional;
 
-import static com.spring_boots.spring_boots.config.jwt.UserConstants.ACCESS_TOKEN_TYPE_VALUE;
-import static com.spring_boots.spring_boots.config.jwt.UserConstants.REFRESH_TOKEN_TYPE_VALUE;
+import static com.spring_boots.spring_boots.config.jwt.JwtConstants.*;
 
 @RequiredArgsConstructor
 @Component
@@ -44,26 +45,22 @@ public class JwtFilter extends OncePerRequestFilter {
             // 액세스토큰이 유효한 경우, Authentication 객체 생성
             Authentication authentication = tokenProvider.getAuthentication(jwtAccessToken);
             SecurityContextHolder.getContext().setAuthentication(authentication);
-        } else if (jwtRefreshToken != null) {
+            } else if (jwtRefreshToken != null) {
             // 액세스토큰이 만료된 경우, 리프레시토큰 검증
             log.info("Access token expired, validating refresh token...");
 
             // 리프레시토큰이 유효하다면 새로운 액세스토큰 발급
             // 해당 메소드에서 유효성 검사까지 같이 진행
-            String[] newToken = tokenProvider.generateAccessTokenAndRefreshToken(jwtRefreshToken);
+            TokenDto tokenDto = tokenProvider.generateAccessTokenAndRefreshToken(jwtRefreshToken);
 
             log.info("토큰 재발급 완료..!");
 
             // 새로운 액세스토큰을 쿠키에 저장
-            Cookie newAccessTokenCookie = new Cookie(ACCESS_TOKEN_TYPE_VALUE, newAccessToken);
-            newAccessTokenCookie.setHttpOnly(true);
-            newAccessTokenCookie.setSecure(true);
-            newAccessTokenCookie.setAttribute("SameSite", "Lax");
-            newAccessTokenCookie.setPath("/");
-            response.addCookie(newAccessTokenCookie);
+            CookieUtil.addCookie(response, ACCESS_TOKEN_TYPE_VALUE, tokenDto.getAccessToken());
+            CookieUtil.addCookie(response, REFRESH_TOKEN_TYPE_VALUE, tokenDto.getRefreshToken());
 
             // 새로운 액세스토큰으로 Authentication 객체 생성
-            Authentication authentication = tokenProvider.getAuthentication(newAccessToken);
+            Authentication authentication = tokenProvider.getAuthentication(tokenDto.getAccessToken());
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 

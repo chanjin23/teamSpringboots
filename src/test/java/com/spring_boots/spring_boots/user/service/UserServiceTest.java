@@ -24,8 +24,8 @@ import org.springframework.test.context.ActiveProfiles;
 import java.security.Key;
 import java.util.*;
 
-import static com.spring_boots.spring_boots.config.jwt.UserConstants.ACCESS_TOKEN_TYPE_VALUE;
-import static com.spring_boots.spring_boots.config.jwt.UserConstants.REFRESH_TOKEN_TYPE_VALUE;
+import static com.spring_boots.spring_boots.config.jwt.JwtConstants.ACCESS_TOKEN_TYPE_VALUE;
+import static com.spring_boots.spring_boots.config.jwt.JwtConstants.REFRESH_TOKEN_TYPE_VALUE;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -135,8 +135,8 @@ public class UserServiceTest {
         AuthTokenImpl accessToken = new AuthTokenImpl("accessToken", key);
         AuthTokenImpl refreshToken = new AuthTokenImpl("refreshToken", key);
 
-        when(jwtProvider.createAuthToken(user.getUserRealId(), user.getRole(), user.getUserId(),user.getProvider(), ACCESS_TOKEN_TYPE_VALUE)).thenReturn(accessToken);
-        when(jwtProvider.createAuthToken(user.getUserRealId(), user.getRole(), user.getUserId(),user.getProvider(), REFRESH_TOKEN_TYPE_VALUE)).thenReturn(refreshToken);
+        when(jwtProvider.createAuthToken(user.getUserRealId(), user.getRole().getRoleName(), user.getUserId(),user.getProvider().getProvider(), ACCESS_TOKEN_TYPE_VALUE)).thenReturn(accessToken);
+        when(jwtProvider.createAuthToken(user.getUserRealId(), user.getRole().getRoleName(), user.getUserId(),user.getProvider().getProvider(), REFRESH_TOKEN_TYPE_VALUE)).thenReturn(refreshToken);
 
         JwtTokenDto jwtTokenDto = userAuthService.login(request);
 

@@ -13,10 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-
-import static com.spring_boots.spring_boots.config.jwt.UserConstants.ACCESS_TOKEN_TYPE_VALUE;
-import static com.spring_boots.spring_boots.config.jwt.UserConstants.REFRESH_TOKEN_TYPE_VALUE;
+import static com.spring_boots.spring_boots.config.jwt.JwtConstants.ACCESS_TOKEN_TYPE_VALUE;
+import static com.spring_boots.spring_boots.config.jwt.JwtConstants.REFRESH_TOKEN_TYPE_VALUE;
 
 @Service
 @RequiredArgsConstructor
@@ -39,12 +37,20 @@ public class UserAuthService {
                 .build();
     }
 
+    public boolean validateToken(String accessToken) {
+        return jwtProvider.validateToken(accessToken);
+    }
+
+    public boolean validateAdminToken(String accessToken) {
+        return jwtProvider.validateAdminToken(accessToken);
+    }
+
     private AuthTokenImpl getAuthToken(Users user, String type) {
         return jwtProvider.createAuthToken(
                 user.getUserRealId(),   //토큰에 실제 ID 정보 입력
-                user.getRole(),
+                user.getRole().getRoleName(),
                 user.getUserId(),
-                user.getProvider(),
+                user.getProvider().getProvider(),
                 type
         );
     }

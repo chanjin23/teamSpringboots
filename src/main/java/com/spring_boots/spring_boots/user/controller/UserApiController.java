@@ -1,5 +1,6 @@
 package com.spring_boots.spring_boots.user.controller;
 
+import com.spring_boots.spring_boots.common.util.CookieUtil;
 import com.spring_boots.spring_boots.user.domain.Provider;
 import com.spring_boots.spring_boots.user.domain.Users;
 import com.spring_boots.spring_boots.user.dto.UserDto;
@@ -10,18 +11,16 @@ import com.spring_boots.spring_boots.user.dto.response.*;
 import com.spring_boots.spring_boots.user.exception.PasswordNotMatchException;
 import com.spring_boots.spring_boots.user.service.UserService;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import static com.spring_boots.spring_boots.config.jwt.UserConstants.ACCESS_TOKEN_TYPE_VALUE;
-import static com.spring_boots.spring_boots.config.jwt.UserConstants.REFRESH_TOKEN_TYPE_VALUE;
+import static com.spring_boots.spring_boots.config.jwt.JwtConstants.ACCESS_TOKEN_TYPE_VALUE;
+import static com.spring_boots.spring_boots.config.jwt.JwtConstants.REFRESH_TOKEN_TYPE_VALUE;
 
 @RestController
 @RequiredArgsConstructor
@@ -95,12 +94,13 @@ public class UserApiController {
     @DeleteMapping("/users-soft/{id}")
     public ResponseEntity<UserDeleteResponseDto> softDeleteUser(UserDto userDto,
                                                                 @PathVariable Long id,
+                                                                HttpServletRequest request,
                                                                 HttpServletResponse response) {
         UserDeleteResponseDto userDeleteResponseDto = userService.softDeleteUser(userDto);
 
         if (userDeleteResponseDto.isDeleted()) {
-            deleteCookie(REFRESH_TOKEN_TYPE_VALUE, response);
-            deleteCookie(ACCESS_TOKEN_TYPE_VALUE, response);
+            CookieUtil.deleteCookie(request, response, ACCESS_TOKEN_TYPE_VALUE);
+            CookieUtil.deleteCookie(request, response, REFRESH_TOKEN_TYPE_VALUE);
 
             return ResponseEntity.status(HttpStatus.OK)
                     .body(UserDeleteResponseDto.builder().message("회원탈퇴 성공").build());
@@ -136,15 +136,16 @@ public class UserApiController {
 
     //로그아웃
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletResponse response,
+    public ResponseEntity<Void> logout(HttpServletRequest request,
+                                       HttpServletResponse response,
                                        UserDto user) {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
         //엑세스토큰, 리프레시토큰 삭제
-        deleteCookie(REFRESH_TOKEN_TYPE_VALUE, response);
-        deleteCookie(ACCESS_TOKEN_TYPE_VALUE, response);
+        CookieUtil.deleteCookie(request, response, ACCESS_TOKEN_TYPE_VALUE);
+        CookieUtil.deleteCookie(request, response, REFRESH_TOKEN_TYPE_VALUE);
 
         return ResponseEntity.status(HttpStatus.OK).build();
     }
@@ -172,16 +173,5 @@ public class UserApiController {
     public ResponseEntity<UserProviderResponseDto> checkProvider(UserDto userDto) {
         return ResponseEntity.status(HttpStatus.OK).body(UserProviderResponseDto.builder()
                 .provider(userDto.getProvider()).build());
-    }
-
-    //쿠키 삭제 로직
-    private void deleteCookie(String token, HttpServletResponse response) {
-        Cookie cookie = new Cookie(token, null);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setAttribute("SameSite", "Lax");
-        cookie.setPath("/");
-        cookie.setMaxAge(0); // 쿠키 즉시 만료
-        response.addCookie(cookie);
     }
 }
