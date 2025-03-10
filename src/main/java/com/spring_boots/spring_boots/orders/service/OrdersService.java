@@ -1,6 +1,7 @@
 package com.spring_boots.spring_boots.orders.service;
 
 import com.spring_boots.spring_boots.common.config.error.BadRequestException;
+import com.spring_boots.spring_boots.email.service.EmailService;
 import com.spring_boots.spring_boots.item.entity.Item;
 import com.spring_boots.spring_boots.item.repository.ItemRepository;
 import com.spring_boots.spring_boots.orders.dto.*;
@@ -33,6 +34,7 @@ public class OrdersService {
     private final OrderItemsRepository orderItemsRepository;
 
     private final UserService userService;
+    private final EmailService emailService;
 
     private final UserInfoRepository usersInfoRepository;
 
@@ -195,6 +197,8 @@ public class OrdersService {
 
         // OrderItems와 Orders 간의 관계를 설정
         savedOrder.setOrderItemsList(orderItemsList);
+
+        emailService.sendEmailByOrder(userEntity,request);
 
         return savedOrder;
     }

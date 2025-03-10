@@ -24,8 +24,7 @@ public class EmailTestController {
     public ResponseEntity<?> testSendEmail(UserDto userDto) {
         Users findUser = userService.findById(userDto.getUserId());
 
-        EmailMessage createEmail = emailService.createEmail(findUser);
-        emailService.sendEmail(createEmail);
+        emailService.sendEmail(findUser);
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 }
