@@ -6,15 +6,15 @@ spring:
     name: Spring_boots
   datasource:
     # H2 Database configuration
-    driverClassName: org.h2.Driver
-    password: ''
-    username: sa
-    url: jdbc:h2:mem:testdb
+    driverClassName: com.mysql.cj.jdbc.Driver
+    password: ${MYSQL_PASSWORD}
+    username: ${MYSQL_USERNAME}
+    url: ${MYSQL_URL}
   h2:
     console:
       # H2 console settings - Access at http://localhost:8080/h2-console
       path: /h2-console
-      enabled: 'true'
+      enabled: 'false'
   devtools:
     restart:
       enabled: true
@@ -24,13 +24,25 @@ spring:
     show-sql: 'true'
     hibernate:
       ddl-auto: update
-    database-platform: org.hibernate.dialect.H2Dialect
+    database-platform: org.hibernate.dialect.MySQL8Dialect
     properties:
       hibernate:
         format_sql: 'true'
   sql:
     init:
       mode: always
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME} # 3
+    password: ${MAIL_PASSWORD} # 4
+    properties:
+      mail:
+        smtp:
+          auth: true # 사용자 인증 시도 여부
+          timeout: 5000 # Socket Read Timeout
+          starttls:
+            enable: true # StartTls 활성화 여부
 
   security:
     oauth2:
